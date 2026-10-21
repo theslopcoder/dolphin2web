@@ -1,6 +1,10 @@
 set(ZLIB_ENABLE_TESTS OFF)
 set(ZLIB_COMPAT ON)
 set(SKIP_INSTALL_ALL ON)
+if(EMSCRIPTEN)
+  # The Emscripten toolchain reports an x86 processor; skip the x86 intrinsics code paths.
+  set(WITH_OPTIM OFF CACHE BOOL "" FORCE)
+endif()
 
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
 

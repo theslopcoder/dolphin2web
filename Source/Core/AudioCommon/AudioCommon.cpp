@@ -10,6 +10,9 @@
 #include "AudioCommon/CubebStream.h"
 #include "AudioCommon/Mixer.h"
 #include "AudioCommon/NullSoundStream.h"
+#ifdef __EMSCRIPTEN__
+#include "AudioCommon/WebAudioStream.h"
+#endif
 #include "AudioCommon/OpenALStream.h"
 #include "AudioCommon/OpenSLESStream.h"
 #include "AudioCommon/PulseAudioStream.h"
@@ -42,6 +45,10 @@ static std::unique_ptr<SoundStream> CreateSoundStreamForBackend(std::string_view
     return std::make_unique<OpenSLESStream>();
   else if (backend == BACKEND_WASAPI && WASAPIStream::IsValid())
     return std::make_unique<WASAPIStream>();
+#ifdef __EMSCRIPTEN__
+  else if (backend == BACKEND_WEBAUDIO)
+    return std::make_unique<WebAudioStream>();
+#endif
   return {};
 }
 
@@ -96,6 +103,8 @@ std::string GetDefaultSoundBackend()
 {
 #if defined(ANDROID)
   return BACKEND_OPENSLES;
+#elif defined(__EMSCRIPTEN__)
+  return BACKEND_WEBAUDIO;
 #else
   if (CubebStream::IsValid())
     return BACKEND_CUBEB;
@@ -119,6 +128,9 @@ std::vector<std::string> GetSoundBackends()
   std::vector<std::string> backends;
 
   backends.emplace_back(BACKEND_NULLSOUND);
+#ifdef __EMSCRIPTEN__
+  backends.emplace_back(BACKEND_WEBAUDIO);
+#endif
   if (CubebStream::IsValid())
     backends.emplace_back(BACKEND_CUBEB);
   if (AlsaSound::IsValid())

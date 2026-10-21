@@ -114,6 +114,9 @@ std::size_t CachedInterpreter::Disassemble(const JitBlock& block, std::ostream& 
       LOOKUP_KV(CachedInterpreter::CheckFPU),
       LOOKUP_KV(CachedInterpreter::CheckBreakpoint),
       LOOKUP_KV(CachedInterpreter::CheckIdle),
+#ifdef __EMSCRIPTEN__
+      LOOKUP_KV(CachedInterpreter::WasmEntry),
+#endif
   });
 
 #undef LOOKUP_KV

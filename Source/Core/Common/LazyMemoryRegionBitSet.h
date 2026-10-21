@@ -10,6 +10,67 @@
 
 namespace Common
 {
+#ifdef __EMSCRIPTEN__
+// dolphin2web: wasm32 has no lazily-committed virtual memory, and the desktop implementation
+// would eagerly commit hundreds of MiB (one bit per possible PPC instruction address). Use a
+// two-level sparse bit set instead: 8 KiB pages are allocated only when a bit in them is set.
+class LazyMemoryRegionBitSet final
+{
+public:
+  LazyMemoryRegionBitSet(size_t bits);
+  ~LazyMemoryRegionBitSet();
+  LazyMemoryRegionBitSet(const LazyMemoryRegionBitSet&) = delete;
+  LazyMemoryRegionBitSet& operator=(const LazyMemoryRegionBitSet&) = delete;
+
+  bool IsValid() const { return m_valid; }
+
+  void Clear();
+
+  bool TestBit(size_t bit) const
+  {
+    const u32* page = m_pages[bit >> PAGE_BITS_SHIFT];
+    if (!page)
+      return false;
+    const size_t local = bit & PAGE_BITS_MASK;
+    return (page[local / 32] & (1u << (local % 32))) != 0;
+  }
+
+  void SetBit(size_t bit)
+  {
+    u32* page = GetPageForWrite(bit >> PAGE_BITS_SHIFT);
+    const size_t local = bit & PAGE_BITS_MASK;
+    page[local / 32] |= (1u << (local % 32));
+  }
+
+  void ClearBit(size_t bit)
+  {
+    u32* page = m_pages[bit >> PAGE_BITS_SHIFT];
+    if (!page)
+      return;
+    const size_t local = bit & PAGE_BITS_MASK;
+    page[local / 32] &= ~(1u << (local % 32));
+  }
+
+  void SetBits(size_t bits_start, size_t bits_end);
+
+  void ClearBits(size_t bits_start, size_t bits_end);
+
+  // There is no flat backing memory on the web build.
+  const u32* GetRawMemory() const { return nullptr; }
+
+private:
+  static constexpr size_t PAGE_BITS_SHIFT = 16;  // 65536 bits = 8 KiB per page
+  static constexpr size_t PAGE_BITS = size_t(1) << PAGE_BITS_SHIFT;
+  static constexpr size_t PAGE_BITS_MASK = PAGE_BITS - 1;
+
+  u32* GetPageForWrite(size_t page_index);
+
+  u32** m_pages = nullptr;
+  size_t m_num_pages = 0;
+  size_t m_bits;
+  bool m_valid;
+};
+#else
 // A bit set backed by a LazyMemoryRegion.
 class LazyMemoryRegionBitSet final
 {
@@ -73,4 +134,5 @@ private:
   void CheckBitIndicesWriteable(size_t bits_start, size_t bits_end);
 };
 
+#endif  // __EMSCRIPTEN__
 }  // namespace Common

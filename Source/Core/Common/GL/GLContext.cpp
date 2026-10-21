@@ -14,6 +14,9 @@
 #if defined(__HAIKU__)
 #include "Common/GL/GLInterface/BGL.h"
 #endif
+#if defined(__EMSCRIPTEN__)
+#include "Common/GL/GLInterface/Web.h"
+#endif
 #if HAVE_EGL
 #include "Common/GL/GLInterface/EGL.h"
 #if HAVE_X11
@@ -94,6 +97,9 @@ std::unique_ptr<GLContext> GLContext::Create(const WindowSystemInfo& wsi, bool s
 #if defined(__HAIKU__)
   if (wsi.type == WindowSystemType::Haiku)
     context = std::make_unique<GLContextBGL>();
+#endif
+#if defined(__EMSCRIPTEN__)
+  context = std::make_unique<GLContextWeb>();
 #endif
 #if HAVE_EGL
 #if HAVE_X11

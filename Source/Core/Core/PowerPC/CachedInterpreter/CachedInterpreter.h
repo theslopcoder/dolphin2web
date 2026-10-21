@@ -4,6 +4,10 @@
 #pragma once
 
 #include <cstddef>
+#ifdef __EMSCRIPTEN__
+#include <unordered_set>
+#include <vector>
+#endif
 
 #include "Common/CommonTypes.h"
 #include "Common/RangeSizeSet.h"
@@ -56,6 +60,12 @@ public:
   JitBaseBlockCache* GetBlockCache() override { return &m_block_cache; }
   const char* GetName() const override { return "Cached Interpreter"; }
   const CommonAsmRoutinesBase* GetAsmRoutines() override { return nullptr; }
+
+#ifdef __EMSCRIPTEN__
+  // dolphin2web: PowerPC -> WebAssembly recompilation of hot blocks (CachedInterpreterWasm.cpp).
+  void WasmOnBlockDestroyed(const JitBlock& block);
+  void WasmLogStats() const;
+#endif
 
 private:
   void ExecuteOneBlock();
@@ -113,6 +123,35 @@ private:
 
   Common::RangeSizeSet<u8*> m_free_ranges;
   CachedInterpreterBlockCache m_block_cache;
+
+#ifdef __EMSCRIPTEN__
+public:
+  struct WasmEntryOperands;
+
+private:
+  static constexpr s32 WASM_SLOT_NOT_YET = -1;
+  static constexpr s32 WASM_SLOT_NEVER = -2;
+  // A block has to run this many times before it is worth compiling to WebAssembly.
+  static constexpr u32 WASM_HOTNESS_THRESHOLD = 8;
+  static constexpr u32 WASM_TABLE_GROW_STEP = 1024;
+
+  static s32 WasmEntry(PowerPC::PowerPCState& ppc_state, const WasmEntryOperands& operands);
+  static s32 WasmEntry(std::ostream& stream, const WasmEntryOperands& operands);
+  WasmEntryOperands* WriteWasmEntry();
+  void FinishWasmEntry(WasmEntryOperands* entry, const u8* end);
+  bool WasmCompileBlock(WasmEntryOperands& entry, const u8* begin, const u8* end);
+  void WasmClearAll();
+
+  bool m_wasm_enabled = true;
+  u32 m_wasm_failures = 0;
+  std::vector<u32> m_wasm_free_slots;
+  std::unordered_set<u32> m_wasm_used_slots;
+  u64 m_wasm_compiled_blocks = 0;
+  u64 m_wasm_native_instructions = 0;
+  u64 m_wasm_fallback_instructions = 0;
+
+  friend class CachedInterpreterBlockCache;
+#endif
 };
 
 struct CachedInterpreter::StartProfiledBlockOperands

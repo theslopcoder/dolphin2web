@@ -30,3 +30,9 @@ target_compile_definitions(sfml-system PUBLIC SFML_STATIC)
 target_include_directories(sfml-system PUBLIC SFML/include PRIVATE SFML/src)
 target_include_directories(sfml-network PUBLIC SFML/include PRIVATE SFML/src)
 target_link_libraries(sfml-network PUBLIC sfml-system)
+
+if(EMSCRIPTEN)
+  # Override SFML/Config.hpp so SFML accepts Emscripten as a Linux-like system.
+  target_include_directories(sfml-system BEFORE PUBLIC web)
+  target_include_directories(sfml-network BEFORE PUBLIC web)
+endif()

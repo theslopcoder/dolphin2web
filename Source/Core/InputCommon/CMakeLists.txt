@@ -1,7 +1,7 @@
 add_library(inputcommon
   DynamicInputTextureManager.cpp
   DynamicInputTextureManager.h
-  GCAdapter.cpp
+  $<IF:$<BOOL:${DOLPHIN_WEB}>,GCAdapterWeb.cpp,GCAdapter.cpp>
   GCAdapter.h
   ImageOperations.cpp
   ImageOperations.h
@@ -144,7 +144,7 @@ elseif(ANDROID)
   )
 endif()
 
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT DOLPHIN_WEB)
   target_link_libraries(inputcommon PUBLIC LibUSB::LibUSB)
 endif()
 
@@ -166,7 +166,7 @@ if(LIBEVDEV_FOUND AND LIBUDEV_FOUND)
   )
 endif()
 
-if(UNIX)
+if(UNIX AND NOT DOLPHIN_WEB)
   target_sources(inputcommon PRIVATE
     ControllerInterface/Pipes/Pipes.cpp
     ControllerInterface/Pipes/Pipes.h
@@ -196,4 +196,11 @@ if(TARGET Hidapi::Hidapi)
   )
   target_link_libraries(inputcommon PUBLIC Hidapi::Hidapi)
   target_compile_definitions(inputcommon PRIVATE -DHAVE_HIDAPI=1)
+endif()
+
+if(DOLPHIN_WEB)
+  target_sources(inputcommon PRIVATE
+    ControllerInterface/Web/Web.cpp
+    ControllerInterface/Web/Web.h
+  )
 endif()

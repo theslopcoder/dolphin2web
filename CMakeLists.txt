@@ -159,6 +159,28 @@ if(APPLE)
   set(MACOS_CODE_SIGNING_IDENTITY "-" CACHE STRING "The identity used for codesigning.")
 endif()
 
+# dolphin2web: WebAssembly (Emscripten) target.
+# The browser has no Qt, Vulkan, USB, X11, etc. Force everything that cannot work off and
+# build the "DolphinWeb" frontend instead.
+if(EMSCRIPTEN)
+  message(STATUS "dolphin2web: building for WebAssembly (Emscripten)")
+  set(DOLPHIN_WEB 1)
+  add_definitions(-DDOLPHIN_WEB=1)
+  set(ENABLE_GENERIC ON)
+  foreach(opt ENABLE_QT ENABLE_NOGUI ENABLE_CLI_TOOL ENABLE_VULKAN ENABLE_TESTS USE_DISCORD_PRESENCE
+              USE_MGBA USE_RETRO_ACHIEVEMENTS ENABLE_AUTOUPDATE ENABLE_ANALYTICS ENCODE_FRAMEDUMPS
+              USE_UPNP ENABLE_CUBEB ENABLE_SDL ENABLE_ALSA ENABLE_PULSEAUDIO ENABLE_LLVM ENABLE_X11
+              ENABLE_EGL ENABLE_EVDEV ENABLE_HWDB ENABLE_LTO)
+    set(${opt} OFF CACHE BOOL "" FORCE)
+  endforeach()
+  set(USE_SYSTEM_LIBS OFF CACHE STRING "" FORCE)
+  # Dolphin is heavily multithreaded; map std::thread onto Web Workers + SharedArrayBuffer.
+  add_compile_options(-pthread)
+  add_link_options(-pthread)
+  # SIMD128 is available in every Chrome version that ships on ChromeOS today.
+  add_compile_options(-msimd128)
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   option(ENABLE_VTUNE "Enable Intel VTune integration for JIT code." OFF)
 
@@ -573,7 +595,7 @@ if(ENABLE_EVDEV)
   endif()
 endif()
 
-if(UNIX)
+if(UNIX AND NOT DOLPHIN_WEB)
   message(STATUS "Using named pipes as controller inputs")
   add_definitions(-DUSE_PIPES=1)
   message(STATUS "Watching game memory for changes")
@@ -699,7 +721,7 @@ if(ENABLE_CUBEB)
   add_definitions(-DHAVE_CUBEB)
 endif()
 
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT DOLPHIN_WEB)
   dolphin_find_optional_system_library(LibUSB Externals/libusb)
   add_definitions(-D__LIBUSB__)
 endif()
@@ -718,9 +740,11 @@ endif()
 
 dolphin_find_optional_system_library(MBEDTLS Externals/mbedtls 2.28)
 
-dolphin_find_optional_system_library(CURL Externals/curl)
+if(NOT DOLPHIN_WEB)
+  dolphin_find_optional_system_library(CURL Externals/curl)
+endif()
 
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT DOLPHIN_WEB)
   dolphin_find_optional_system_library(HIDAPI Externals/hidapi)
 endif()
 

@@ -85,7 +85,7 @@ add_library(common
   HookableEvent.h
   HostDisassembler.cpp
   HostDisassembler.h
-  HttpRequest.cpp
+  $<IF:$<BOOL:${DOLPHIN_WEB}>,HttpRequestWeb.cpp,HttpRequest.cpp>
   HttpRequest.h
   Image.cpp
   Image.h
@@ -191,7 +191,7 @@ PUBLIC
   sfml-network
 
 PRIVATE
-  CURL::libcurl
+  $<$<TARGET_EXISTS:CURL::libcurl>:CURL::libcurl>
   FatFs
   spng::spng
   watcher
@@ -247,6 +247,11 @@ elseif(APPLE)
     CommonFuncsObjC.mm
     Logging/ConsoleListenerNix.cpp
     MemArenaDarwin.cpp
+  )
+elseif(DOLPHIN_WEB)
+  target_sources(common PRIVATE
+    Logging/ConsoleListenerNix.cpp
+    MemArenaWeb.cpp
   )
 else()
   target_sources(common PRIVATE
@@ -326,6 +331,11 @@ elseif(APPLE)
     GL/GLInterface/AGL.h
     GL/GLInterface/AGL.mm
   )
+elseif(DOLPHIN_WEB)
+  target_sources(common PRIVATE
+    GL/GLInterface/Web.h
+    GL/GLInterface/Web.cpp
+  )
 elseif(HAIKU)
   target_sources(common PRIVATE
     GL/GLInterface/BGL.h
@@ -374,7 +384,7 @@ if(ENABLE_LLVM)
   endif()
 endif()
 
-if(UNIX)
+if(UNIX AND NOT DOLPHIN_WEB)
   # Posix networking code needs to be fixed for Windows
   add_executable(traversal_server TraversalServer.cpp)
   target_link_libraries(traversal_server PRIVATE common fmt::fmt)

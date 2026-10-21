@@ -38,6 +38,11 @@
 #if defined(HAVE_HIDAPI)
 #define CIFACE_USE_STEAMDECK
 #endif
+#if defined(__EMSCRIPTEN__)
+#define CIFACE_USE_WEB
+// Raw UDP sockets are not available in browsers.
+#undef CIFACE_USE_DUALSHOCKUDPCLIENT
+#endif
 
 namespace ciface
 {

@@ -98,3 +98,10 @@ if(MSVC)
   # Add precompiled header
   target_link_libraries(audiocommon PRIVATE use_pch)
 endif()
+
+if(DOLPHIN_WEB)
+  target_sources(audiocommon PRIVATE
+    WebAudioStream.cpp
+    WebAudioStream.h
+  )
+endif()

@@ -519,6 +519,8 @@ add_library(core
   PowerPC/CachedInterpreter/CachedInterpreterBlockCache.h
   PowerPC/CachedInterpreter/CachedInterpreterEmitter.cpp
   PowerPC/CachedInterpreter/CachedInterpreterEmitter.h
+  PowerPC/CachedInterpreter/CachedInterpreterWasm.cpp
+  PowerPC/CachedInterpreter/WasmEmitter.h
   PowerPC/ConditionRegister.cpp
   PowerPC/ConditionRegister.h
   PowerPC/Expression.cpp
@@ -832,7 +834,7 @@ if(TARGET Hidapi::Hidapi)
   target_compile_definitions(core PRIVATE -DHAVE_HIDAPI=1)
 endif()
 
-if(UNIX)
+if(UNIX AND NOT DOLPHIN_WEB)
   target_sources(core PRIVATE
     MemoryWatcher.cpp
     MemoryWatcher.h

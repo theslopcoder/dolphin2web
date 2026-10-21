@@ -3,6 +3,7 @@
 
 #include "Core/PowerPC/CachedInterpreter/CachedInterpreterBlockCache.h"
 
+#include "Core/PowerPC/CachedInterpreter/CachedInterpreter.h"
 #include "Core/PowerPC/CachedInterpreter/CachedInterpreterEmitter.h"
 #include "Core/PowerPC/JitCommon/JitBase.h"
 
@@ -18,6 +19,9 @@ bool CachedInterpreterBlockCache::Init()
 
 void CachedInterpreterBlockCache::DestroyBlock(JitBlock& block)
 {
+#ifdef __EMSCRIPTEN__
+  static_cast<CachedInterpreter&>(m_jit).WasmOnBlockDestroyed(block);
+#endif
   JitBaseBlockCache::DestroyBlock(block);
 
   if (block.near_begin != block.near_end)

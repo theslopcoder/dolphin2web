@@ -55,7 +55,13 @@ bool CachedInterpreter::Init()
 
 void CachedInterpreter::Shutdown()
 {
+#ifdef __EMSCRIPTEN__
+  WasmLogStats();
+#endif
   m_block_cache.Shutdown();
+#ifdef __EMSCRIPTEN__
+  WasmClearAll();
+#endif
 }
 
 void CachedInterpreter::ExecuteOneBlock()
@@ -68,6 +74,22 @@ void CachedInterpreter::ExecuteOneBlock()
   }
 
   auto& ppc_state = m_ppc_state;
+#ifdef __EMSCRIPTEN__
+  // Blocks compiled to WebAssembly run in a single call.
+  if (*reinterpret_cast<const AnyCallback*>(normal_entry) == AnyCallbackCast(WasmEntry))
+  {
+    const u8* payload = normal_entry + sizeof(AnyCallback);
+    if (const auto distance =
+            WasmEntry(ppc_state, *reinterpret_cast<const WasmEntryOperands*>(payload)))
+    {
+      normal_entry += distance;
+    }
+    else
+    {
+      return;
+    }
+  }
+#endif
   while (true)
   {
     const auto callback = *reinterpret_cast<const AnyCallback*>(normal_entry);
@@ -360,6 +382,10 @@ bool CachedInterpreter::DoJit(u32 em_address, JitBlock* b, u32 nextPC)
   auto& cpu = m_system.GetCPU();
   auto& breakpoints = power_pc.GetBreakPoints();
 
+#ifdef __EMSCRIPTEN__
+  WasmEntryOperands* const wasm_entry = WriteWasmEntry();
+#endif
+
   if (IsProfilingEnabled())
     Write(StartProfiledBlock, {js.curBlock->profile_data.get()});
 
@@ -429,6 +455,9 @@ bool CachedInterpreter::DoJit(u32 em_address, JitBlock* b, u32 nextPC)
     WARN_LOG_FMT(DYNA_REC, "JIT ran out of space in code region during code generation.");
     return false;
   }
+#ifdef __EMSCRIPTEN__
+  FinishWasmEntry(wasm_entry, GetCodePtr());
+#endif
   return true;
 }
 
@@ -458,6 +487,9 @@ std::size_t CachedInterpreter::DisassembleFarCode(const JitBlock& block, std::os
 void CachedInterpreter::ClearCache()
 {
   m_block_cache.Clear();
+#ifdef __EMSCRIPTEN__
+  WasmClearAll();
+#endif
   m_block_cache.ClearRangesToFree();
   ClearCodeSpace();
   ResetFreeMemoryRanges();
